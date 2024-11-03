@@ -735,7 +735,7 @@ class MC_agent(object):
 # print(run_game(maze, 4))
 
 # %%
-def epsilon_greedy(state, epsilon, Q, actions):
+def epsilon_greedy(state, epsilon, policy, actions):
 #    if np.random.random() < epsilon:
 #        # Take random action - explore
 #        action = random.randint(0, actions - 1)
@@ -748,19 +748,19 @@ def epsilon_greedy(state, epsilon, Q, actions):
         return action 
 
 
-def generate_episode(env, actions, policy):
-    t, state, reward, done = env.reset()
-    episode = []
-    while not done:
-        action_probs = policy[state]
+# def generate_episode(env, actions, policy):
+#     t, state, reward, done = env.reset()
+#     episode = []
+#     while not done:
+#         action_probs = policy[state]
             
-        action = np.random.choice(np.arange(len(action_probs)), p = action_probs)
+#         action = np.random.choice(np.arange(len(action_probs)), p = action_probs)
         
-        t, next_state, reward, done = env.step(action)
-        episode.append((t, state, action, reward))
-        state = next_state
+#         t, next_state, reward, done = env.step(action)
+#         episode.append((t, state, action, reward))
+#         state = next_state
 
-    return episode
+#     return episode
 
 def initialize_policy(states, actions, Q, policy, epsilon):
     for state in range(states):
@@ -815,14 +815,14 @@ class TD_agent(object):
     for episode in range(n_episodes):
       
       t, state, reward, done = env.reset()
-      action = epsilon_greedy(state, epsilon, Q, 4)
+      action = epsilon_greedy(state, epsilon, policy, 4)
       reward_sum = 0
       # alpha = initial_alpha / (episode + 1)
 
       while not done:
         t, next_state, reward, done = env.step(action)
 
-        next_action = epsilon_greedy(next_state, epsilon, Q, 4)
+        next_action = epsilon_greedy(next_state, epsilon, policy, 4)
 
         Q[state, action] += alpha * (
            reward + gamma * Q[next_state, next_action] - Q[state, action]
