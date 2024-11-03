@@ -3,7 +3,7 @@
 # %%
 import numpy as np 
 import random
-import matplotlib.pyplot as plt # Graphical library
+#import matplotlib.pyplot as plt # Graphical library
 
 # %% [markdown]
 # # Coursework 1 :
