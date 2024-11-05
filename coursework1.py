@@ -596,7 +596,7 @@ class MC_agent(object):
 
     # policy = np.ones((env.get_state_size(), env.get_action_size())) / env.get_action_size()
 
-    for iteration in range(500):
+    for iteration in range(1000):
       
       G = 0
       episode = generate_episode(env, actions, policy)
@@ -800,12 +800,21 @@ class TD_agent(object):
     values = [V]
     total_rewards = []
 
+    absorbing = env.get_absorbing()[0]
+
+    for ind, state in enumerate(absorbing):
+      if state != 0:
+        Q[ind, :] = 0
+    
+    print("Q", Q)
+
+
     states = env.get_state_size()
     actions = env.get_action_size()
     gamma = env.get_gamma()   
 
-    alpha = 0.1 
-    epsilon = 0.4
+    alpha = 0.1 # 0.1  Although theory says that alpha should follow Robbins-Monro conditions, but in practice it is observed that the SARSA stil converges by using constant aplha - David Silver
+    epsilon = 0.4  # 0.4
     #initial_alpha = 0.1
 
     n_episodes = 1000
@@ -814,13 +823,16 @@ class TD_agent(object):
 
     for episode in range(n_episodes):
       
+      epsilon = epsilon - (epsilon/n_episodes) 
       t, state, reward, done = env.reset()
       action = epsilon_greedy(state, epsilon, policy, 4)
       reward_sum = 0
-      # alpha = initial_alpha / (episode + 1)
-
+      
+      #alpha = alpha/np.sqrt((episode + 1))
       while not done:
         t, next_state, reward, done = env.step(action)
+
+        alpha = 1 / (t + 1)
 
         next_action = epsilon_greedy(next_state, epsilon, policy, 4)
 
@@ -828,50 +840,39 @@ class TD_agent(object):
            reward + gamma * Q[next_state, next_action] - Q[state, action]
         )      
 
-        state = next_state
-        action = next_action
-        reward_sum += reward
-
-      total_rewards.append(reward_sum)
-
-
-      for s_t in range(states):
-
-        Q_list = Q[s_t] 
+        Q_list = Q[state] 
         indices = np.where(Q_list == np.max(Q_list))[0]  # Get indices of max Q-values
         max_Q = np.random.choice(indices) 
         A_star = max_Q # 14.
 
         for a in range(actions): # Update action probability for s_t in policy
           if a == A_star:
-              policy[s_t][a] = 1 - epsilon + (epsilon / actions)
+              policy[state][a] = 1 - epsilon + (epsilon / actions)
           else:
-              policy[s_t][a] = (epsilon / actions)
-            
+              policy[state][a] = (epsilon / actions)
+
+        state = next_state
+        action = next_action
+        reward_sum += reward
+
+      total_rewards.append(reward_sum)
+
+      # for s_t in range(states):
+
+      #   Q_list = Q[s_t] 
+      #   indices = np.where(Q_list == np.max(Q_list))[0]  # Get indices of max Q-values
+      #   max_Q = np.random.choice(indices) 
+      #   A_star = max_Q # 14.
+
+      #   for a in range(actions): # Update action probability for s_t in policy
+      #     if a == A_star:
+      #         policy[s_t][a] = 1 - epsilon + (epsilon / actions)
+      #     else:
+      #         policy[s_t][a] = (epsilon / actions)
+        
+
       V = np.sum(policy*Q, axis = 1)
       values.append(V.copy())
-
-#############################################################
-
-      # for s in range(states):
-      #   max_Q = np.max(Q[s])
-      #   max_Q_indices = np.where(Q[s] == max_Q)[0]
-      #   policy[s, max_Q_indices] = 1 / len(max_Q_indices)
-      #   policy[s, np.where(Q[s] != max_Q)[0]] = 0
-      #   V[s] = max(Q[s])
-      # #print(type(values))
-      # values.append(V)
-      
-
-    
-
-    #### 
-    # Add your code here
-    # WARNING: this agent only has access to env.reset() and env.step()
-    # You should not use env.get_T(), env.get_R() or env.get_absorbing() to compute any value
-    ####
-    
-    return policy, values, total_rewards
 
 # # %%
 # import numpy as np
