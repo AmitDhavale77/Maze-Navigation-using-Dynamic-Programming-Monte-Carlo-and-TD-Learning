@@ -742,25 +742,25 @@ def epsilon_greedy(state, epsilon, policy, actions):
 #        return action
 #    else:
 #        # Take action with the highest Q-value - exploit
-#        return np.argmax(Q[state])
+        # return np.argmax(Q[state])
         action_probs = policy[state]      
         action = np.random.choice(np.arange(len(action_probs)), p = action_probs)   
         return action 
 
 
-# def generate_episode(env, actions, policy):
-#     t, state, reward, done = env.reset()
-#     episode = []
-#     while not done:
-#         action_probs = policy[state]
+def generate_episode(env, actions, policy):
+    t, state, reward, done = env.reset()
+    episode = []
+    while not done:
+        action_probs = policy[state]
             
-#         action = np.random.choice(np.arange(len(action_probs)), p = action_probs)
+        action = np.random.choice(np.arange(len(action_probs)), p = action_probs)
         
-#         t, next_state, reward, done = env.step(action)
-#         episode.append((t, state, action, reward))
-#         state = next_state
+        t, next_state, reward, done = env.step(action)
+        episode.append((t, state, action, reward))
+        state = next_state
 
-#     return episode
+    return episode
 
 def initialize_policy(states, actions, Q, policy, epsilon):
     for state in range(states):
@@ -771,12 +771,14 @@ def initialize_policy(states, actions, Q, policy, epsilon):
             else:
                 policy[state][action] = (epsilon / actions)  
 
-    return policy          
+    return policy                
 
 # %% [markdown]
 # ## TD agent
 
 # %%
+# This class define the Temporal-Difference agent
+
 # This class define the Temporal-Difference agent
 
 class TD_agent(object):
@@ -874,111 +876,71 @@ class TD_agent(object):
       V = np.sum(policy*Q, axis = 1)
       values.append(V.copy())
 
-      return policy, values, total_rewards
+#############################################################
 
-# # %%
-# import numpy as np
-# import matplotlib.pyplot as plt
+      # for s in range(states):
+      #   max_Q = np.max(Q[s])
+      #   max_Q_indices = np.where(Q[s] == max_Q)[0]
+      #   policy[s, max_Q_indices] = 1 / len(max_Q_indices)
+      #   policy[s, np.where(Q[s] != max_Q)[0]] = 0
+      #   V[s] = max(Q[s])
+      # #print(type(values))
+      # values.append(V)
+      
 
-# maze = Maze()
-# maze = Maze()
-# td_agent = TD_agent()
-# td_policy, td_values, total_rewards = td_agent.solve(maze)
-
-# def run_multiple_training_runs(env, num_runs=25, num_episodes=1000):
-#     all_total_rewards = []
-#     agent = TD_agent()
     
-#     # Run the agent multiple times
-#     for run in range(num_runs):
-#         _, _, total_rewards = agent.solve(env)
-#         all_total_rewards.append(total_rewards)  # Ensure consistency in length
-#         print(total_rewards)
-#     # Convert to np.array for easier manipulation
-#     all_total_rewards = np.array(all_total_rewards)
 
-#     # Calculate the mean and standard deviation of rewards at each episode
-#     mean_rewards = np.mean(all_total_rewards, axis=0)
-#     std_rewards = np.std(all_total_rewards, axis=0)
+    #### 
+    # Add your code here
+    # WARNING: this agent only has access to env.reset() and env.step()
+    # You should not use env.get_T(), env.get_R() or env.get_absorbing() to compute any value
+    ####
     
-#     return mean_rewards, std_rewards
-
-# # Plotting the learning curve
-# def plot_learning_curve(mean_rewards, std_rewards, num_episodes=1000):
-#     episodes = np.arange(num_episodes)
-    
-#     plt.figure(figsize=(10, 6))
-#     plt.plot(episodes, mean_rewards, label="Mean Total Reward", color="b")
-#     plt.fill_between(episodes, 
-#                      mean_rewards - std_rewards, 
-#                      mean_rewards + std_rewards, 
-#                      color="b", alpha=0.2, label="Std Dev")
-    
-#     plt.xlabel("Episodes")
-#     plt.ylabel("Total Non-Discounted Sum of Rewards")
-#     plt.title("Learning Curve of TD Agent")
-#     plt.legend()
-#     plt.show()
-
-# # Usage example
-# mean_rewards, std_rewards = run_multiple_training_runs(maze)
-# plot_learning_curve(mean_rewards, std_rewards)
+    return policy, values, total_rewards
 
 
-# # %%
-# maze = Maze()
-# td_agent = TD_agent()
-# td_policy, td_values, total_rewards = td_agent.solve(maze)
-
-# print("Results of the TD agent:\n")
-# maze.get_graphics().draw_policy(td_policy)
-# maze.get_graphics().draw_value(td_values[-1])
-
-# print("policy", td_policy)
-# print("values", td_values)
-# print("rewards", total_rewards)
 
 
 # %% [markdown]
 # ## Example main
 
 # %%
-# Example main (can be edited)
+#Example main (can be edited)
 
-### Question 0: Defining the environment
+## Question 0: Defining the environment
 
-# print("Creating the Maze:\n")
-# maze = Maze()
-
-
-# ### Question 1: Dynamic programming
-
-# dp_agent = DP_agent()
-# dp_policy, dp_value = dp_agent.solve(maze)
-
-# print("Results of the DP agent:\n")
-# maze.get_graphics().draw_policy(dp_policy)
-# maze.get_graphics().draw_value(dp_value)
+print("Creating the Maze:\n")
+maze = Maze()
 
 
-# ### Question 2: Monte-Carlo learning
+### Question 1: Dynamic programming
 
-# mc_agent = MC_agent()
-# mc_policy, mc_values, total_rewards = mc_agent.solve(maze)
+dp_agent = DP_agent()
+dp_policy, dp_value = dp_agent.solve(maze)
 
-# print("Results of the MC agent:\n")
-# maze.get_graphics().draw_policy(mc_policy)
-# maze.get_graphics().draw_value(mc_values[-1])
+print("Results of the DP agent:\n")
+maze.get_graphics().draw_policy(dp_policy)
+maze.get_graphics().draw_value(dp_value)
 
 
-# ### Question 3: Temporal-Difference learning
+### Question 2: Monte-Carlo learning
 
-# td_agent = TD_agent()
-# td_policy, td_values, total_rewards = td_agent.solve(maze)
+mc_agent = MC_agent()
+mc_policy, mc_values, total_rewards = mc_agent.solve(maze)
 
-# print("Results of the TD agent:\n")
-# maze.get_graphics().draw_policy(td_policy)
-# maze.get_graphics().draw_value(td_values[-1])
+print("Results of the MC agent:\n")
+maze.get_graphics().draw_policy(mc_policy)
+maze.get_graphics().draw_value(mc_values[-1])
+
+
+### Question 3: Temporal-Difference learning
+
+td_agent = TD_agent()
+td_policy, td_values, total_rewards = td_agent.solve(maze)
+
+print("Results of the TD agent:\n")
+maze.get_graphics().draw_policy(td_policy)
+maze.get_graphics().draw_value(td_values[-1])
 
 # %%
 
