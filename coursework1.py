@@ -874,6 +874,8 @@ class TD_agent(object):
       V = np.sum(policy*Q, axis = 1)
       values.append(V.copy())
 
+      return policy, values, total_rewards
+
 # # %%
 # import numpy as np
 # import matplotlib.pyplot as plt
