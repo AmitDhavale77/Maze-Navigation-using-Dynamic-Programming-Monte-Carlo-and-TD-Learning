@@ -446,6 +446,16 @@ class DP_agent(object):
     # Add your code here
     # WARNING: for this agent only, you are allowed to access env.get_T(), env.get_R() and env.get_absorbing()
     ####
+
+
+    #### Here we are accessing the environment properties ####
+    # T: Transition matrix 
+    # R: Reward matrix 
+    # absorbing: Boolean array indicating absorbing states in the environment
+    # actions: Total number of possible actions
+    # states: Total number of possible states
+    # gamma: Discount factor 
+
     T = env.get_T()
     R = env.get_R()
     absorbing = env.get_absorbing()
@@ -453,18 +463,9 @@ class DP_agent(object):
     states = env.get_state_size()
     gamma = env.get_gamma()
 
-    print("T", T)
-    print("T_shape", np.shape(T))
+    # Set threshold for convergence of the value function
 
-    print("R", R)
-    print("R_shape", np.shape(R))
-
-    print("absorbing", absorbing)
-    print("abs_shape", np.shape(absorbing))
-    print(actions)
-    print(states)
-    print(gamma)
-    threshold = 0.0001
+    threshold = 1
 
     # Ensure gamma value is valid
     assert (gamma <=1) and (gamma >= 0), "Discount factor should be in [0, 1]."
@@ -512,19 +513,23 @@ class DP_agent(object):
       policy[prior_state, np.argmax(Q)] = 1 
 
     return policy, V
-    
-    #return policy_iteration(threshold = 0.0001, gamma = gamma)
 
-# %%
-# maze = Maze()
 
-# dp_agent = DP_agent()
-
-# policy, V = dp_agent.solve(maze)
 
 # %%
 def generate_episode(env, actions, policy):
-    t, state, reward, done = env.reset()
+    """ To generate an episode based on the policy
+    
+    Args:
+        env (object): The object of the maze class
+        actions (int): Total number of possible actions
+        policy (np.array): An array of size (number of states x number of actions)
+    
+    Returns:
+        list: The generated episode
+    """
+
+    t, state, reward, done = env.reset() 
     episode = []
     while not done:
         action_probs = policy[state]
@@ -538,6 +543,17 @@ def generate_episode(env, actions, policy):
     return episode
 
 def initialize_policy(states, actions, Q, policy, epsilon):
+    """ To initialize the policy
+    
+    Args:
+        states (int): Total number of states
+        actions (int): Total number of possible actions
+        Q (np.array): An array of state-action value function having size (number of states x number of actions)
+        policy (np.array): An array of size (number of states x number of actions)
+        epsilon (float): A parameter to choose the action based on a stochastic policy
+    Returns:
+        np.array: The initialized policy based on epsilon soft policy 
+    """
     for state in range(states):
         best_action = random.choice(range(actions))
         for action in range(actions):
@@ -546,7 +562,7 @@ def initialize_policy(states, actions, Q, policy, epsilon):
             else:
                 policy[state][action] = (epsilon / actions)  
 
-    return policy          
+    return policy                  
 
 # %% [markdown]
 # ## MC agent
@@ -571,12 +587,14 @@ class MC_agent(object):
     # Initialisation (can be edited)
     Q = np.random.rand(env.get_state_size(), env.get_action_size()) 
     V = np.zeros(env.get_state_size())
-    epsilon=0.4
+    epsilon=0.01
     states = env.get_state_size()
     actions = env.get_action_size()
     gamma = env.get_gamma()
     policy = np.zeros((env.get_state_size(), env.get_action_size()))
     
+    # Initialize policy based on initial Q values
+
     policy = initialize_policy(states, actions, Q, policy, epsilon) 
     values = [V]
     total_rewards = []
@@ -594,25 +612,29 @@ class MC_agent(object):
 
     returns = {}
 
-    # policy = np.ones((env.get_state_size(), env.get_action_size())) / env.get_action_size()
-
-    for iteration in range(1000):
+    # Set the number of episodes to run Monte Carlo algorithm
+    
+    num_episodes = 1000
+    for iteration in range(num_episodes):
       
-      G = 0
-      episode = generate_episode(env, actions, policy)
+      G = 0  # Initialize return
+      episode = generate_episode(env, actions, policy) # Generate an episode using the current policy
       sum_rewards = 0
-      # epsilon = epsilon - (epsilon/500)
+      epsilon = epsilon - (epsilon/num_episodes) # Decay epsilon over time
+
       for i in reversed(range(0, len(episode))):   
 
-        t, s_t, a_t, r_t = episode[i] 
+        t, s_t, a_t, r_t = episode[i] # Time step, state, action, reward for current step
         state_action = (s_t, a_t)
         G = gamma*G + r_t # Increment total reward by reward on current timestep
         sum_rewards += r_t
 
+        # Check if this is the first occurrence of the state-action pair in the episode
+
         if not state_action in [(x[1], x[2]) for x in episode[0:i]]: # to check 
-          #  # Initialize N[state_action] if it doesn't exist
-          # if state_action not in N:
-          #     N[state_action] = 0
+        
+        # Update returns for the state-action pair
+
           if returns.get(state_action):
             returns[state_action].append(G)
           else:
@@ -620,149 +642,61 @@ class MC_agent(object):
               
           Q[s_t][a_t] = np.mean(returns[state_action]) # Average reward across episodes
           
-          #N[state_action] += 1
-          #V[s_t] = np.sum(Q[s_t])
-          #alpha = 1/N[state_action] 
-          #V[s_t] = V[s_t] + alpha*(G - V[s_t])
           Q_list = Q[s_t] 
           indices = np.where(Q_list == np.max(Q_list))[0]  # Get indices of max Q-values
           max_Q = np.random.choice(indices) 
-
-          # Q_list = list(map(lambda x: x[1], Q[s_t].items())) # Finding the action with maximum value
-          # indices = [i for i, x in enumerate(Q_list) if x == max(Q_list)]
-          # max_Q = random.choice(indices)
           
-          A_star = max_Q # 14.
-
-          #V[s_t] = max(Q_list)
+          A_star = max_Q # Optimal action for the current state
           
           for a in range(actions): # Update action probability for s_t in policy
             if a == A_star:
                 policy[s_t][a] = 1 - epsilon + (epsilon / actions)
             else:
                 policy[s_t][a] = (epsilon / actions)
-            
-          #V[s_t] = np.sum(policy[s_t]*Q[s_t])
       
-      # Update the value function V based on Q and policy
-      # for s in range(states):
-      #   V[s] = sum(policy[s][a] * Q[s][a] for a in range(actions))
+      # Calculate the value function V based on current policy and Q values
 
-      # Append the current V to the values list
-      # epsilon = epsilon/300
       V = np.sum(policy*Q, axis = 1)
       values.append(V.copy())
-      total_rewards.append(sum_rewards)
+      total_rewards.append(sum_rewards) # Store the total rewards for the current episode
     
     return policy, values, total_rewards
 
-# # %%
-# import numpy as np
-# import matplotlib.pyplot as plt
-
-# maze = Maze()
-# # mc_agent = MC_agent()
-# # mc_policy, mc_values, total_rewards = mc_agent.solve(maze)
-
-# def run_multiple_training_runs(env, num_runs=25, num_episodes=500):
-#     all_total_rewards = []
-#     agent = MC_agent()
-    
-#     # Run the agent multiple times
-#     for run in range(num_runs):
-#         _, _, total_rewards = agent.solve(env)
-#         all_total_rewards.append(total_rewards)  # Ensure consistency in length
-#         print(total_rewards)
-#     # Convert to np.array for easier manipulation
-#     all_total_rewards = np.array(all_total_rewards)
-
-#     # Calculate the mean and standard deviation of rewards at each episode
-#     mean_rewards = np.mean(all_total_rewards, axis=0)
-#     std_rewards = np.std(all_total_rewards, axis=0)
-    
-#     return mean_rewards, std_rewards
-
-# # Plotting the learning curve
-# def plot_learning_curve(mean_rewards, std_rewards, num_episodes=500):
-#     episodes = np.arange(num_episodes)
-    
-#     plt.figure(figsize=(10, 6))
-#     plt.plot(episodes, mean_rewards, label="Mean Total Reward", color="b")
-#     plt.fill_between(episodes, 
-#                      mean_rewards - std_rewards, 
-#                      mean_rewards + std_rewards, 
-#                      color="b", alpha=0.2, label="Std Dev")
-    
-#     plt.xlabel("Episodes")
-#     plt.ylabel("Total Non-Discounted Sum of Rewards")
-#     plt.title("Learning Curve of Monte Carlo Agent")
-#     plt.legend()
-#     plt.show()
-
-# # Usage example
-# mean_rewards, std_rewards = run_multiple_training_runs(maze)
-# plot_learning_curve(mean_rewards, std_rewards)
-
-
-# # %%
-# maze = Maze()
-# mc_agent = MC_agent()
-# mc_policy, mc_values, total_rewards = mc_agent.solve(maze)
-
-# print("Results of the MC agent:\n")
-# maze.get_graphics().draw_policy(mc_policy)
-# maze.get_graphics().draw_value(mc_values[-1])
-
-# print("policy", mc_policy)
-# print("values", mc_values)
-# print("rewards", total_rewards)
-
-# %%
-# def run_game(env, actions):
-#     t, state, reward, done = env.reset()
-#     episode = []
-#     #finished = False
-
-#     while not done:
-#         #print(random.sample(range(actions), actions))
-#         action = random.randint(0, actions - 1)
-#         episode.append((t, state, action, reward))
-#         t, state, reward, done = env.step(action)
-
-#     return episode
-
-# maze = Maze()
-# print(run_game(maze, 4))
 
 # %%
 def epsilon_greedy(state, epsilon, policy, actions):
-#    if np.random.random() < epsilon:
-#        # Take random action - explore
-#        action = random.randint(0, actions - 1)
-#        return action
-#    else:
-#        # Take action with the highest Q-value - exploit
-        # return np.argmax(Q[state])
-        action_probs = policy[state]      
-        action = np.random.choice(np.arange(len(action_probs)), p = action_probs)   
-        return action 
-
-
-def generate_episode(env, actions, policy):
-    t, state, reward, done = env.reset()
-    episode = []
-    while not done:
-        action_probs = policy[state]
-            
-        action = np.random.choice(np.arange(len(action_probs)), p = action_probs)
+    """ To choose an random action based on greedy policy
+    
+    Args:
+        state (int): The current state
+        epsilon (float): A parameter to choose the action based on a stochastic policy
+        policy (np.array): An array of size (number of states x number of actions)
+        actions (int): Total number of possible actions
         
-        t, next_state, reward, done = env.step(action)
-        episode.append((t, state, action, reward))
-        state = next_state
+    
+    Returns:
+        int: The chosen action
+    """
 
-    return episode
+    action_probs = policy[state]      
+    action = np.random.choice(np.arange(len(action_probs)), p = action_probs)   
+    return action 
+
 
 def initialize_policy(states, actions, Q, policy, epsilon):
+    """ To choose an random action based on greedy policy
+    
+    Args:
+        state (int): The current state
+        epsilon (float): A parameter to choose the action based on a stochastic policy
+        policy (np.array): An array of size (number of states x number of actions)
+        actions (int): Total number of possible actions
+        
+    
+    Returns:
+        int: The chosen action
+    """
+
     for state in range(states):
         best_action = random.choice(range(actions))
         for action in range(actions):
@@ -771,7 +705,7 @@ def initialize_policy(states, actions, Q, policy, epsilon):
             else:
                 policy[state][action] = (epsilon / actions)  
 
-    return policy                
+    return policy    
 
 # %% [markdown]
 # ## TD agent
@@ -802,50 +736,66 @@ class TD_agent(object):
     values = [V]
     total_rewards = []
 
+    #### 
+    # Add your code here
+    # WARNING: this agent only has access to env.reset() and env.step()
+    # You should not use env.get_T(), env.get_R() or env.get_absorbing() to compute any value
+    ####
+
+    # Get the absorbing states
+
     absorbing = env.get_absorbing()[0]
+
+    # Set the Q-values for absorbing states to zero
 
     for ind, state in enumerate(absorbing):
       if state != 0:
         Q[ind, :] = 0
     
-    print("Q", Q)
-
-
     states = env.get_state_size()
     actions = env.get_action_size()
     gamma = env.get_gamma()   
 
     alpha = 0.1 # 0.1  Although theory says that alpha should follow Robbins-Monro conditions, but in practice it is observed that the SARSA stil converges by using constant aplha - David Silver
     epsilon = 0.4  # 0.4
-    #initial_alpha = 0.1
 
-    n_episodes = 1000
+    n_episodes = 1000 # Total number of episodes to run
+
+    # Initialize the policy based on the initial Q-values
 
     policy = initialize_policy(states, actions, Q, policy, epsilon)
 
     for episode in range(n_episodes):
       
-      epsilon = epsilon - (epsilon/n_episodes) 
+      epsilon = epsilon - (epsilon/n_episodes) # Implementation of epsilon decay
       t, state, reward, done = env.reset()
-      action = epsilon_greedy(state, epsilon, policy, 4)
-      reward_sum = 0
+      action = epsilon_greedy(state, epsilon, policy, actions) # Select the first action using epsilon-greedy policy
+      reward_sum = 0 # Track the sum of rewards for this episode
       
-      #alpha = alpha/np.sqrt((episode + 1))
+      # Loop over each step within the episode until the agent reaches a terminal state
+
       while not done:
+
+        # Take action and observe the next state, reward, and whether the episode is done
+
         t, next_state, reward, done = env.step(action)
 
-        alpha = 1 / (t + 1)
+        alpha = 1 / (t + 1) # Implement alpha decay
 
-        next_action = epsilon_greedy(next_state, epsilon, policy, 4)
+        next_action = epsilon_greedy(next_state, epsilon, policy, actions) # Select the next action using epsilon-greedy policy
+
+        # Update the Q-value using the SARSA update rule
 
         Q[state, action] += alpha * (
            reward + gamma * Q[next_state, next_action] - Q[state, action]
         )      
 
+        # Update policy to choose the action with the highest Q-value for the current state
+
         Q_list = Q[state] 
         indices = np.where(Q_list == np.max(Q_list))[0]  # Get indices of max Q-values
         max_Q = np.random.choice(indices) 
-        A_star = max_Q # 14.
+        A_star = max_Q # choose the best action
 
         for a in range(actions): # Update action probability for s_t in policy
           if a == A_star:
@@ -853,49 +803,19 @@ class TD_agent(object):
           else:
               policy[state][a] = (epsilon / actions)
 
+         # Move to the next state and action
+         
         state = next_state
         action = next_action
         reward_sum += reward
 
-      total_rewards.append(reward_sum)
+      total_rewards.append(reward_sum)       
 
-      # for s_t in range(states):
-
-      #   Q_list = Q[s_t] 
-      #   indices = np.where(Q_list == np.max(Q_list))[0]  # Get indices of max Q-values
-      #   max_Q = np.random.choice(indices) 
-      #   A_star = max_Q # 14.
-
-      #   for a in range(actions): # Update action probability for s_t in policy
-      #     if a == A_star:
-      #         policy[s_t][a] = 1 - epsilon + (epsilon / actions)
-      #     else:
-      #         policy[s_t][a] = (epsilon / actions)
-        
+      # Calculate the value function V based on current policy and Q values
 
       V = np.sum(policy*Q, axis = 1)
       values.append(V.copy())
-
-#############################################################
-
-      # for s in range(states):
-      #   max_Q = np.max(Q[s])
-      #   max_Q_indices = np.where(Q[s] == max_Q)[0]
-      #   policy[s, max_Q_indices] = 1 / len(max_Q_indices)
-      #   policy[s, np.where(Q[s] != max_Q)[0]] = 0
-      #   V[s] = max(Q[s])
-      # #print(type(values))
-      # values.append(V)
       
-
-    
-
-    #### 
-    # Add your code here
-    # WARNING: this agent only has access to env.reset() and env.step()
-    # You should not use env.get_T(), env.get_R() or env.get_absorbing() to compute any value
-    ####
-    
     return policy, values, total_rewards
 
 
