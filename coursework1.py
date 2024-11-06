@@ -609,6 +609,8 @@ class MC_agent(object):
     # You should not use env.get_T(), env.get_R() or env.get_absorbing() to compute any value
     ####
 
+    returns = {}
+    
     # Set the number of episodes to run Monte Carlo algorithm
     
     num_episodes = 1000
