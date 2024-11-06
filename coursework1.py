@@ -415,7 +415,7 @@ class Maze(object):
     return self._t, self._state, self._reward, self._done
 
 # %%
-# maze = Maze()
+maze = Maze()
 # print(maze.get_gamma())
 # #print(maze.get_gamma())
 
